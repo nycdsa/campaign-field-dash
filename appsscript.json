@@ -1,0 +1,34 @@
+{
+  "timeZone": "America/New_York",
+  "exceptionLogging": "STACKDRIVER",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/spreadsheets"
+  ],
+  "runtimeVersion": "V8",
+  "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Drive",
+        "version": "v2",
+        "serviceId": "drive"
+      }
+    ]
+  },
+  "sheets": {
+    "macros": [
+      {
+        "menuName": "Import File",
+        "functionName": "ImportFile"
+      },
+      {
+        "menuName": "Untitled Macro",
+        "functionName": "UntitledMacro"
+      },
+      {
+        "menuName": "setupFiles",
+        "functionName": "setupFiles"
+      }
+    ]
+  }
+}
