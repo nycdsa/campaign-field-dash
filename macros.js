@@ -8,12 +8,7 @@ var surveyFolder;
 var contactFolder_;
 var tempFolder;
 
-function compareRangeAndArray(range, stringArray) {
-  // Convert the range to a string array
-  var rangeValues = range.getValues();
-  var rangeArray = rangeValues.map(row => row.map(cell => String(cell)));
-
-  // Compare the converted range array with the provided string array
+function compareArrays(rangeArray, stringArray) {
   var compareArrays = function (array1, array2) {
     if (array1.length !== array2.length) {
       return false;
@@ -29,7 +24,7 @@ function processSurvey() {
   setup();
   setupSheet("surveyDataTemp");
   setupFiles();
-  processXLSFilesInZip(surveyData, surveyFolder, "Add Survey Data");
+  processCSVFilesInZip(surveyData, surveyFolder, "Add Survey Data");
   cleanupSheet(surveyData);
   showDoneMessage();
 }
@@ -38,7 +33,7 @@ function processContact() {
   setup();
   setupSheet("contactDataTemp");
   setupFiles();
-  processXLSFilesInZip(contactData, contactFolder_, "Add Contact Data");
+  processCSVFilesInZip(contactData, contactFolder_, "Add Contact Data");
   cleanupSheet(contactData);
   showDoneMessage();
 }
@@ -205,7 +200,7 @@ function setupFiles() {
     .next();
 }
 
-function processXLSFilesInZip(sheet, folder, output) {
+function processCSVFilesInZip(sheet, folder, output) {
   var filesIterator = folder.getFiles();
   var files = [];
   while (filesIterator.hasNext()) {
@@ -235,7 +230,7 @@ function processXLSFilesInZip(sheet, folder, output) {
 
             // Perform operations on the XLS file
             try {
-              processXLSData(sheet, tempFolder, innerFile, output, j === 0);
+              processCSVData(sheet, tempFolder, innerFile, output, j === 0);
             } catch (e) {
               addRowsToTable(output, innerFileName, null, null, null, e, isFirstFile);
             }
@@ -254,21 +249,14 @@ function processXLSFilesInZip(sheet, folder, output) {
 
 
 
-function processXLSData(sheet, folder, xlsBlob, outputSheet, reset) {
-  var newFile = {
-    title: xlsBlob.getName(),
-    parents: [{ id: folder.getId() }], //  Added
-  };
-  var file = Drive.Files.insert(newFile, xlsBlob, {
-    convert: true,
-  });
+function processCSVData(sheet, folder, csvBlob, outputSheet, reset) {
+  var csvData = Utilities.parseCsv(csvBlob.getDataAsString());
 
-  var otherSpreadsheet = SpreadsheetApp.openById(file.id);
-  var otherSheet = otherSpreadsheet.getSheets()[0]; // Change to the desired sheet name
-  var dateRange = otherSheet.getRange(2, 3, otherSheet.getLastRow() - 1, 3);
-  var dateValues = dateRange.getValues().flat().filter(Number);
-  var hdr = otherSheet
-    .getRange(1, 1, 1, otherSheet.getLastColumn());
+  // Get the data values excluding headers
+  var dateValues = csvData.slice(1).flat().filter(Number);
+  
+  // Get the header values
+  var hdr = csvData[0];
 
   var contactHdr = Array([
     "Voter File VANID",
@@ -295,11 +283,9 @@ function processXLSData(sheet, folder, xlsBlob, outputSheet, reset) {
   ]);
 
   if (
-    ((outputSheet == "Add Survey Data") & !compareRangeAndArray(hdr,surveyHdr)) |
-    ((outputSheet == "Add Contact Data") & !compareRangeAndArray(hdr,contactHdr))
+    ((outputSheet == "Add Survey Data") & !compareArrays(hdr,surveyHdr)) |
+    ((outputSheet == "Add Contact Data") & !compareArrays(hdr,contactHdr))
   ) {
-    Drive.Files.remove(file.id); // Added // If this line is run, the original XLSX file is removed. So please be careful this.
-
     throw new Error(
       "Header does not align with expected output, please check file"
     );
@@ -318,7 +304,7 @@ function processXLSData(sheet, folder, xlsBlob, outputSheet, reset) {
 
   addRowsToTable(
     outputSheet,
-    xlsBlob.getName(),
+    csvBlob.getName(),
     minRange,
     maxRange,
     dateRange.getNumRows(),
@@ -328,23 +314,19 @@ function processXLSData(sheet, folder, xlsBlob, outputSheet, reset) {
 
   Logger.log(
     "File " +
-      xlsBlob.getName() +
+      csvBlob.getName() +
       ", starts on " +
       minRange +
       " and ends on " +
       maxRange
   );
 
-  var importedData = otherSheet
-    .getRange(2, 1, otherSheet.getLastRow() - 1, otherSheet.getLastColumn())
-    .getValues();
-
-  Drive.Files.remove(file.id); // Added // If this line is run, the original XLSX file is removed. So please be careful this.
+  var importedData = csvData.slice(1).flat();
 
   // Append the imported data to the existing or new sheet
 
   var startRow = sheet.getLastRow() + 1;
-  var filename = Array(importedData.length).fill([xlsBlob.getName()]);
+  var filename = Array(importedData.length).fill([csvBlob.getName()]);
   var dateTimeCol = Array(importedData.length).fill([
     Utilities.formatDate(new Date(), "America/New_York", "MM/dd/yyyy h:mm a"),
   ]);
