@@ -9,15 +9,15 @@ var contactFolder_;
 var tempFolder;
 
 function compareArrays(rangeArray, stringArray) {
-  var compareArrays = function (array1, array2) {
-    if (array1.length !== array2.length) {
-      return false;
-    }
+  if (rangeArray.length !== stringArray.length) {
+    return false;
+  }
 
-    return array1.every((row, index) => row.toString() === array2[index].toString());
-  };
-
-  return compareArrays(rangeArray, stringArray);
+  return rangeArray.every((row, index) => {
+    var isEqual = row.toString() === stringArray[index].toString();
+    //Logger.log(`Comparison for row ${index + 1}: ${isEqual}`);
+    return isEqual;
+  });
 }
 
 function processSurvey() {
@@ -45,11 +45,25 @@ function cleanupSheet(sheet) {
   } else {
     Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   }
-  sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).sort(3);
-  sheet
-    .getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn())
-    .removeDuplicates(Array);
+
+  var lastRow = sheet.getLastRow();
+
+  // Check if there is at least one row of data
+  if (lastRow <= 1) {
+    // No data, you can handle this case as needed
+    Logger.log("No data in the range. Skipping cleanup.");
+    return;
+  }
+
+  var dataRange = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn());
+
+  // Sort the data
+  dataRange.sort(3);
+
+  // Remove duplicates
+  dataRange.removeDuplicates(Array);
 }
+
 
 function createTempFolder() {
   var folderName = 'temp'; // Change 'TemporaryFolder' to your desired folder name
@@ -250,15 +264,26 @@ function processCSVFilesInZip(sheet, folder, output) {
 
 
 function processCSVData(sheet, folder, csvBlob, outputSheet, reset) {
-  var csvData = Utilities.parseCsv(csvBlob.getDataAsString());
+  // Assuming csvBlob contains the CSV data
+  //var encoding = processEncoding(csvBlob);
+
+  //Logger.log(encoding)
+
+  var csvData = Utilities.parseCsv(csvBlob.getDataAsString('utf-16'),'\t');
+  //Logger.log(csvData);
 
   // Get the data values excluding headers
   var dateValues = csvData.slice(1).flat().filter(Number);
+  //Logger.log(dateValues);
   
   // Get the header values
   var hdr = csvData[0];
+  //Logger.log(hdr);
 
-  var contactHdr = Array([
+  //Logger.log(csvData);
+
+
+  var contactHdr = [
     "Voter File VANID",
     "Contact Name",
     "Date Canvassed",
@@ -269,9 +294,9 @@ function processCSVData(sheet, folder, csvBlob, outputSheet, reset) {
     "Date Created",
     "Input Type Name",
     "MiniVAN Campaign"
-  ]);
+  ];
 
-  var surveyHdr = Array([
+  var surveyHdr = [
     "Voter File VANID",
     "Contact Name",
     "Date Canvassed",
@@ -280,7 +305,7 @@ function processCSVData(sheet, folder, csvBlob, outputSheet, reset) {
     "Survey Question Type",
     "Canvassed By",
     "Contact Type"
-  ]);
+  ];
 
   if (
     ((outputSheet == "Add Survey Data") & !compareArrays(hdr,surveyHdr)) |
@@ -307,7 +332,7 @@ function processCSVData(sheet, folder, csvBlob, outputSheet, reset) {
     csvBlob.getName(),
     minRange,
     maxRange,
-    dateRange.getNumRows(),
+    dateValues.length,
     "OK",
     reset
   );
@@ -321,7 +346,9 @@ function processCSVData(sheet, folder, csvBlob, outputSheet, reset) {
       maxRange
   );
 
-  var importedData = csvData.slice(1).flat();
+  var importedData = csvData.slice(1);
+
+  //Logger.log(csvData);
 
   // Append the imported data to the existing or new sheet
 
@@ -344,6 +371,19 @@ function processCSVData(sheet, folder, csvBlob, outputSheet, reset) {
   sheet
     .getRange(startRow, sheet.getLastColumn(), importedData.length, 1)
     .setValues(dateTimeCol);
+
+}
+
+function processEncoding(csvBlob) {
+  var utf16LEBOM = Utilities.newBlob([0xFF, 0xFE]).getBytes(); // BOM for UTF-16 LE
+
+
+  // Check if the file has a UTF-16 LE BOM
+  var hasUTF16LEBOM = csvBlob.getBytes()[0] === utf16LEBOM[0] && csvBlob.getBytes()[1] === utf16LEBOM[1];
+
+  // Specify the encoding based on the presence of BOM
+  var encoding = hasUTF16LEBOM ? "utf-16" : "utf-8";
+  return encoding;
 }
 
 function addRowsToTable(
