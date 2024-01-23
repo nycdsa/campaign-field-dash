@@ -1,43 +1,46 @@
 /* eslint-disable no-undef */
 /** @OnlyCurrentDoc */
-
+/** @type {*} */
+/** @param {GoogleAppsScript.Spreadsheet.Sheet} activeSheet*/
 var spreadsheet;
 var parentFolder;
 var contactData;
 var surveyData;
 var surveyFolder;
 var contactFolder_;
-var tempFolder;
-
+var activeSheet;
 function compareArrays(rangeArray, stringArray) {
   if (rangeArray.length !== stringArray.length) {
-        return false;
+    return false;
   }
 
   return rangeArray.every((row, index) => {
     var isEqual = row.toString() === stringArray[index].toString();
-    //Logger.log(`Comparison for row ${index + 1}: ${isEqual}`);
     return isEqual;
   });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function processSurvey() {
+  activeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Add Survey Data")
   setup();
   setupSheet("surveyDataTemp");
   setupFiles();
   processCSVFilesInZip(surveyData, surveyFolder, "Add Survey Data");
-  cleanupSheet(surveyData);
+  var numberOfDuplicates = cleanupSheet(surveyData);
+  sortSummaryandUpdateCounts(numberOfDuplicates);
   showDoneMessage();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function processContact() {
+  activeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Add Contact Data")
   setup();
   setupSheet("contactDataTemp");
   setupFiles();
   processCSVFilesInZip(contactData, contactFolder_, "Add Contact Data");
-  cleanupSheet(contactData);
+  var numberOfDuplicates = cleanupSheet(contactData);
+  sortSummaryandUpdateCounts(numberOfDuplicates);
   showDoneMessage();
 }
 
@@ -62,32 +65,33 @@ function cleanupSheet(sheet) {
 
   // Sort the data
   dataRange.sort(3);
-
   // Remove duplicates
   dataRange.removeDuplicates(Array);
+
+  return numberOfDuplicates = lastRow - sheet.getLastRow();
+
+
 }
 
-function createTempFolder() {
-  var folderName = "temp"; // Change 'TemporaryFolder' to your desired folder name
+/**
+ *
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @param {Number} numberOfDuplicates
+ * @paramm {Number} total
+ */
+function sortSummaryandUpdateCounts(numberOfDuplicates) {
+  var dataRange = activeSheet.getRange(4, 3, activeSheet.getLastRow() - 3, 6);
+  dataRange.sort(4);
+  activeSheet.getRange(5, 11).setValue(numberOfDuplicates);
+  total = activeSheet.getRange(4, 11).getValue();
+  activeSheet.getRange(6, 11).setValue(numberOfDuplicates / total);
 
-  // Check if the folder already exists
-  var folders = parentFolder.getFoldersByName(folderName);
-  if (folders.hasNext()) {
-    tempFolder = folders.next();
-    Logger.log(
-      "Temporary folder already exists with ID: " + tempFolder.getId()
-    );
-    return; // Exit the function if the folder exists
-  }
 
-  // If the folder doesn't exist, create it
-  tempFolder = parentFolder.createFolder(folderName);
-  Logger.log("Temporary folder created with ID: " + tempFolder.getId());
 }
 
 function showPleaseWait() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var cell = sheet.getRange("A1"); // Adjust the cell as per your preference
+  var cell = activeSheet.getRange("A1"); // Adjust the cell as per your preference
   cell.setValue("Please wait...");
 
   // Enhance text visibility and disable text wrapping
@@ -97,8 +101,7 @@ function showPleaseWait() {
 }
 
 function updateProgress(processedXLSFiles, totalXLSFiles) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var cell = sheet.getRange("B1"); // Adjust the cell as per your preference
+  var cell = activeSheet.getRange("B1"); // Adjust the cell as per your preference
 
   var progressPercentage = Math.round(
     (processedXLSFiles / totalXLSFiles) * 100
@@ -111,8 +114,7 @@ function updateProgress(processedXLSFiles, totalXLSFiles) {
   cell.setWrap(false);
 }
 function showDoneMessage() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var cell = sheet.getRange("A1"); // Same cell as the "Please wait..." message
+  var cell = activeSheet.getRange("A1"); // Same cell as the "Please wait..." message
   cell.setValue("Task Completed!");
 
   // Enhance text visibility and disable text wrapping
@@ -122,15 +124,15 @@ function showDoneMessage() {
 }
 
 function clearProgress() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var progressCell = sheet.getRange("B1"); // Assuming progress is displayed in cell B1
-  var doneCell = sheet.getRange("A1"); // Assuming "done" message is displayed in cell C1
+  var progressCell = activeSheet.getRange("B1"); // Assuming progress is displayed in cell B1
+  var doneCell = activeSheet.getRange("A1"); // Assuming "done" message is displayed in cell C1
 
   progressCell.clearContent(); // Clear progress
   doneCell.clearContent(); // Clear "done" message
 }
 
 function setup() {
+  clearTableIfFirstValue();
   clearProgress();
   showPleaseWait();
   spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -169,7 +171,6 @@ function setup() {
       "Date/Time Added",
     ],
   ];
-  createTempFolder();
 }
 
 function setupSheet(sheetName) {
@@ -224,13 +225,19 @@ function setupFiles() {
     .next();
 }
 
+/**
+ * Processes CSV files within a ZIP folder.
+ * 
+ * @param {Sheet} sheet - The sheet to write the output to.
+ * @param {Folder} folder - The folder containing the ZIP files.
+ * @param {string} output - The output destination.
+ */
 function processCSVFilesInZip(sheet, folder, output) {
   var filesIterator = folder.getFiles();
   var files = [];
   while (filesIterator.hasNext()) {
     files.push(filesIterator.next());
   }
-  isFirstFile = true;
   for (var j = 0; j < files.length; j++) {
     // Update progress after each ZIP file processed
     updateProgress(j, files.length - 1);
@@ -244,58 +251,45 @@ function processCSVFilesInZip(sheet, folder, output) {
       // Process the ZIP file contents here
       Logger.log("Processing ZIP file: " + fileName);
       try {
-        for (var i = 0; i < zip.length; i++) {
-          var innerFile = zip[i];
-          var innerFileName = innerFile.getName();
+        var innerFile = zip[0];
+        var innerFileName = innerFile.getName();
 
-          // Handle specific file types within the ZIP (e.g., XLSX)
-          if (innerFileName.endsWith(".xls")) {
-            Logger.log("Processing file within ZIP: " + innerFileName);
+        // Handle specific file types within the ZIP (e.g., XLSX)
+        if (innerFileName.endsWith(".xls")) {
+          Logger.log("Processing file within ZIP: " + innerFileName);
 
-            // Perform operations on the XLS file
-            try {
-              processCSVData(sheet, tempFolder, innerFile, output, j === 0);
-            } catch (e) {
-              addRowsToTable(
-                output,
-                innerFileName,
-                null,
-                null,
-                null,
-                e,
-                isFirstFile
-              );
-            }
-          } else {
-            Logger.log("Skipping non-XLS file within ZIP: " + innerFileName);
+          // Perform operations on the XLS file
+          try {
+            processCSVData(sheet, fileName, innerFile, output);
+          } catch (e) {
+            addRowsToTable(
+              fileName,
+              null,
+              null,
+              null,
+              e);
           }
+        } else {
+          throw new Error("Invalid file type: " + innerFileName + " in " + fileName);
         }
       } catch (e) {
-        addRowsToTable(output, fileName, null, null, null, e, isFirstFile);
+        addRowsToTable(fileName, null, null, null, e);
       }
     }
-    isFirstFile = false;
   }
 }
+/**
+ *
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @param {GoogleAppsScript.Base.Blob} csvBlob
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} outputSheet
+ * @param {string} filename
+ * @param {boolean} reset
+ */
+function processCSVData(sheet,filename_, csvBlob, outputSheet) {
 
-function processCSVData(sheet, _folder, csvBlob, outputSheet, reset) {
-  // Assuming csvBlob contains the CSV data
-  //var encoding = processEncoding(csvBlob);
-
-  //Logger.log(encoding)
-
-  var csvData = Utilities.parseCsv(csvBlob.getDataAsString("utf-16"), "\t");
-  //Logger.log(csvData);
-
-  // Get the data values excluding headers
-  var dateValues = csvData.slice(1).flat().filter(Number);
-  //Logger.log(dateValues);
-
-  // Get the header values
-  var hdr = csvData[0];
-  //Logger.log(hdr);
-
-  //Logger.log(csvData);
+  var csvData = Utilities.parseCsv(csvBlob.getDataAsString("utf-16"), "\t",);
 
   var contactHdr = [
     "Voter File VANID",
@@ -321,6 +315,10 @@ function processCSVData(sheet, _folder, csvBlob, outputSheet, reset) {
     "Contact Type",
   ];
 
+  // Get the header values
+  var hdr = csvData[0];
+
+
   if (
     ((outputSheet == "Add Survey Data") & !compareArrays(hdr, surveyHdr)) |
     ((outputSheet == "Add Contact Data") & !compareArrays(hdr, contactHdr))
@@ -330,117 +328,78 @@ function processCSVData(sheet, _folder, csvBlob, outputSheet, reset) {
     );
   }
 
-  var maxRange = Utilities.formatDate(
-    new Date(Math.max.apply(null, dateValues)),
-    "America/New_York",
-    "MM/dd/yyyy"
-  );
-  var minRange = Utilities.formatDate(
-    new Date(Math.min.apply(null, dateValues)),
-    "America/New_York",
-    "MM/dd/yyyy"
-  );
+  // Get the data values excluding headers
+  csvData = csvData.slice(1).map(row => {
+    // Iterate over each cell in the row
+    return row.map((cell, i) => {
+      // If the header of this column contains the word "Date", reformat the cell
+      if (hdr[i].includes("Date")) {
+        var parts = cell.split('-');
+        if (parts.length === 3) {
+          var date = new Date(parts[0], parts[1] - 1, parts[2]);
+          return Utilities.formatDate(date, "America/New_York", "MM/dd/yyyy");
+        } else {
+          return NaN;
+        }
+      } else {
+        // If the header of this column does not contain the word "Date", return the cell as is
+        return cell;
+      }
+    });
+  });
+  var dateValues = csvData.map(row => new Date(row[2]))
+
+  var maxRange = Utilities.formatDate(new Date(Math.max.apply(null, dateValues)), "America/New_York", "MM/dd/yyyy");
+  var minRange = Utilities.formatDate(new Date(Math.min.apply(null, dateValues)), "America/New_York", "MM/dd/yyyy");
 
   addRowsToTable(
-    outputSheet,
-    csvBlob.getName(),
+    filename_,
     minRange,
     maxRange,
-    dateValues.length,
-    "OK",
-    reset
+    csvData.length,
+    "OK"
   );
 
   Logger.log(
     "File " +
-    csvBlob.getName() +
+    filename_ +
     ", starts on " +
     minRange +
     " and ends on " +
     maxRange
   );
-
-  var importedData = csvData.slice(1);
-
-  //Logger.log(csvData);
-
   // Append the imported data to the existing or new sheet
 
   var startRow = sheet.getLastRow() + 1;
-  var filename = Array(importedData.length).fill([csvBlob.getName()]);
-  var dateTimeCol = Array(importedData.length).fill([
+  var filenameArray = Array(csvData.length).fill([filename_]);
+  var dateTimeCol = Array(csvData.length).fill([
     Utilities.formatDate(new Date(), "America/New_York", "MM/dd/yyyy h:mm a"),
   ]);
 
   sheet
-    .getRange(startRow, 1, importedData.length, importedData[0].length)
-    .setValues(importedData);
+    .getRange(startRow, 1, csvData.length, csvData[0].length)
+    .setValues(csvData);
 
   sheet
-    .getRange(2, sheet.getLastColumn() - 2, importedData.length, 1)
+    .getRange(2, sheet.getLastColumn() - 2, csvData.length, 1)
     .setFormula("=COUNTIF(A$1:A2,A2)");
   sheet
-    .getRange(startRow, sheet.getLastColumn() - 1, importedData.length, 1)
-    .setValues(filename);
+    .getRange(startRow, sheet.getLastColumn() - 1, csvData.length, 1)
+    .setValues(filenameArray);
   sheet
-    .getRange(startRow, sheet.getLastColumn(), importedData.length, 1)
+    .getRange(startRow, sheet.getLastColumn(), csvData.length, 1)
     .setValues(dateTimeCol);
+
+
 }
-function addRowsToTable(
-  sheetName,
-  filename,
-  min,
-  max,
-  numRowsProcessed,
-  statusColumn,
-  isFirstValue
-) {
-  // Get the active spreadsheet
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-
-  // Get the sheet by name
-  var sheet = spreadsheet.getSheetByName(sheetName);
-
-  // Define the specific range you want to work with
-  var range = sheet.getRange("C3:H" + sheet.getLastRow());
-
-  // If isFirstValue is true, clear the table within the range
-  if (isFirstValue) {
-    range.clearContent();
-    sheet
-      .getRange(3, 3, 1, 6)
-      .setValues([
-        [
-          "File Name",
-          "First Date",
-          "Last Date",
-          "# Records",
-          "Error Notes",
-          "Timestamp",
-        ],
-      ]);
-  }
-
-  // Get the last row in the specified range
-  var lastRow = getLastRowInRange(spreadsheet, "C", "H");
-
-  // Calculate the next row number
-  var nextRow = lastRow + 1;
-
-  // Get the current timestamp
-  var timestamp = Utilities.formatDate(
-    new Date(),
-    "America/New_York",
-    "MM/dd/yyyy hh:mm:ss aa"
-  ); //Utilities.formatDate(new Date(),"America/New_York", "MM/dd/yyyy")
-
-  // Create an array with the data to add to the table
-  var rowData = [filename, min, max, numRowsProcessed, statusColumn, timestamp];
-
-  // Set the values in the next row of the specified range
-  sheet.getRange(nextRow, 3, 1, 6).setValues([rowData]);
-}
-
+/**
+ *
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @param {number} startColumn
+ * @param {number} endColumn
+ * @return {number} 
+ */
 function getLastRowInRange(sheet, startColumn, endColumn) {
   var data = sheet
     .getRange(startColumn + "2:" + endColumn + sheet.getLastRow())
@@ -456,4 +415,61 @@ function getLastRowInRange(sheet, startColumn, endColumn) {
     }
   }
   return 1; // If the range is completely empty, return 1 as the first row.
+}
+
+/**
+ *
+ *
+ * @param {String} filename
+ * @param {Number} min
+ * @param {Number} max
+ * @param {Number} numRowsProcessed
+ * @param {String} statusColumn
+ * @param {boolean} isFirstValue
+ */
+function addRowsToTable(
+  filename,
+  min,
+  max,
+  numRowsProcessed,
+  statusColumn
+) {
+
+  // Get the last row in the specified range
+  var lastRow = getLastRowInRange(activeSheet, "C", "H");
+
+  // Calculate the next row number
+  var nextRow = lastRow + 1;
+
+  // Get the current timestamp
+  var timestamp = Utilities.formatDate(
+    new Date(),
+    "America/New_York",
+    "MM/dd/yyyy hh:mm:ss aa"
+  ); //Utilities.formatDate(new Date(),"America/New_York", "MM/dd/yyyy")
+
+  // Create an array with the data to add to the table
+  var rowData = [filename, min, max, numRowsProcessed, statusColumn, timestamp];
+
+  // Set the values in the next row of the specified range
+  activeSheet.getRange(nextRow, 3, 1, 6).setValues([rowData]);
+}
+
+function clearTableIfFirstValue() {
+  var range = activeSheet.getRange("C3:H" + activeSheet.getLastRow());
+
+  // If isFirstValue is true, clear the table within the range
+  range.clearContent();
+  activeSheet
+    .getRange(3, 3, 1, 6)
+    .setValues([
+      [
+        "File Name",
+        "First Date",
+        "Last Date",
+        "# Records",
+        "Error Notes",
+        "Timestamp",
+      ],
+    ]);
 }
