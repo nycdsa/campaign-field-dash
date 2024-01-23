@@ -1,14 +1,36 @@
 /* eslint-disable no-undef */
 /** @OnlyCurrentDoc */
-/** @type {*} */
-/** @param {GoogleAppsScript.Spreadsheet.Sheet} activeSheet*/
-var spreadsheet;
-var parentFolder;
-var contactData;
-var surveyData;
-var surveyFolder;
-var contactFolder_;
+
+
+
+
+
+/** @type {GoogleAppsScript.Spreadsheet.Sheet} */
 var activeSheet;
+
+/** @type {GoogleAppsScript.Spreadsheet.Spreadsheet} */
+var spreadsheet;
+
+/** @type {GoogleAppsScript.Drive.Folder} */
+var parentFolder;
+
+/** @type {Spreadsheet.Drive.Folder} */
+var folder;
+
+/** @type {GoogleAppsScript.Spreadsheet.Sheet} */
+var dataSheet;
+
+/** @type {String[][]} */
+var additionalColumns;
+
+/** @type {String[][]} */
+var header;
+
+/** @type {String[][]} */
+var fullHeader;
+
+
+
 function compareArrays(rangeArray, stringArray) {
   if (rangeArray.length !== stringArray.length) {
     return false;
@@ -21,28 +43,23 @@ function compareArrays(rangeArray, stringArray) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function processSurvey() {
-  activeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Add Survey Data")
+function processSheet() {
+  additionalColumns = [
+    "Instance of VANID",
+    "Filename",
+    "Date/Time Added"
+  ];
+  activeSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   setup();
-  setupSheet("surveyDataTemp");
+  setupSheet(activeSheet.getRange(1, 8).getValue());
   setupFiles();
-  processCSVFilesInZip(surveyData, surveyFolder, "Add Survey Data");
-  var numberOfDuplicates = cleanupSheet(surveyData);
+  processCSVFilesInZip(dataSheet, folder);
+  var numberOfDuplicates = cleanupSheet(dataSheet);
   sortSummaryandUpdateCounts(numberOfDuplicates);
   showDoneMessage();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function processContact() {
-  activeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Add Contact Data")
-  setup();
-  setupSheet("contactDataTemp");
-  setupFiles();
-  processCSVFilesInZip(contactData, contactFolder_, "Add Contact Data");
-  var numberOfDuplicates = cleanupSheet(contactData);
-  sortSummaryandUpdateCounts(numberOfDuplicates);
-  showDoneMessage();
-}
 
 function cleanupSheet(sheet) {
   var Array;
@@ -138,101 +155,46 @@ function setup() {
   spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   parentFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
 
-  surveyHeader = [
-    [
-      "Voter File VANID",
-      "Contact Name",
-      "Date Canvassed",
-      "Survey Response",
-      "Survey Question Name",
-      "Survey Question Type",
-      "Canvassed By",
-      "Contact Type",
-      "Instance of VANID",
-      "Filename",
-      "Date/Time Added",
-    ],
-  ];
-
-  contactHeader = [
-    [
-      "Voter File VANID",
-      "Contact Name",
-      "Date Canvassed",
-      "Result",
-      "Contact Type",
-      "Canvassed By",
-      "Created By",
-      "Date Created",
-      "Input Type Name",
-      "MiniVAN Campaign",
-      "Instance of VANID",
-      "Filename",
-      "Date/Time Added",
-    ],
-  ];
+  header = Utilities.parseCsv(activeSheet.getRange(1, 11).getValue(), ",");
+  fullHeader = header.concat(additionalColumns);
 }
 
 function setupSheet(sheetName) {
-  if (sheetName == "surveyDataTemp") {
-    surveyData = spreadsheet.getSheetByName(sheetName);
-    if (surveyData != null) {
-      surveyData.getDataRange().clear();
-    } else {
-      surveyData = spreadsheet.insertSheet(sheetName);
-    }
-    surveyData
-      .getRange(1, 1, 1, surveyHeader[0].length)
-      .setValues(surveyHeader);
+  dataSheet = spreadsheet.getSheetByName(sheetName);
+  if (dataSheet != null) {
+    dataSheet.getDataRange().clear();
   } else {
-    contactData = spreadsheet.getSheetByName(sheetName);
-    if (contactData != null) {
-      contactData.getDataRange().clear();
-    } else {
-      contactData = spreadsheet.insertSheet(sheetName);
-    }
-    contactData
-      .getRange(1, 1, 1, contactHeader[0].length)
-      .setValues(contactHeader);
+    dataSheet = spreadsheet.insertSheet(sheetName);
   }
+  dataSheet
+    .getRange(1, 1, 1, fullHeader[0].length)
+    .setValues(fullHeader);
 }
 
 /**
  * Sets up the necessary files and folders for the import process.
  */
-function setupFiles() {
+function setupFiles(folderName) {
   // Get the active spreadsheet and its parent folder
+  folder = parentFolder.getFoldersByName(folderName);
+  if (!folder.hasNext()) {
+    folder = parentFolder.createFolder(folderName);
+    // eslint-disable-next-line no-undef
+    Logger.log(folderName + " folder created.");
+  } else {
+    Logger.log(folderName + " folder already exists.");
+  }
 
-  // Define folder names
-  var folderNames = ["temp", "Survey Response Reports", "Contact History Reports"];
-
-  // Create the folders that don't exist
-  folderNames.forEach(function (folderName) {
-    var folder = parentFolder.getFoldersByName(folderName);
-    if (!folder.hasNext()) {
-      parentFolder.createFolder(folderName);
-      // eslint-disable-next-line no-undef
-      Logger.log(folderName + " folder created.");
-    } else {
-      Logger.log(folderName + " folder already exists.");
-    }
-  });
-  surveyFolder = parentFolder
-    .getFoldersByName("Survey Response Reports")
-    .next();
-  contactFolder_ = parentFolder
-    .getFoldersByName("Contact History Reports")
-    .next();
 }
 
 /**
  * Processes CSV files within a ZIP folder.
  * 
  * @param {Sheet} sheet - The sheet to write the output to.
- * @param {Folder} folder - The folder containing the ZIP files.
+ * @param {GoogleAppsScript.Drive.Folder} folder - The folder containing the ZIP files.
  * @param {string} output - The output destination.
  */
-function processCSVFilesInZip(sheet, folder, output) {
+function processCSVFilesInZip(sheet, folder) {
   var filesIterator = folder.getFiles();
   var files = [];
   while (filesIterator.hasNext()) {
@@ -260,7 +222,7 @@ function processCSVFilesInZip(sheet, folder, output) {
 
           // Perform operations on the XLS file
           try {
-            processCSVData(sheet, fileName, innerFile, output);
+            processCSVData(sheet, fileName, innerFile);
           } catch (e) {
             addRowsToTable(
               fileName,
@@ -287,42 +249,15 @@ function processCSVFilesInZip(sheet, folder, output) {
  * @param {string} filename
  * @param {boolean} reset
  */
-function processCSVData(sheet,filename_, csvBlob, outputSheet) {
+function processCSVData(sheet, filename_, csvBlob) {
 
   var csvData = Utilities.parseCsv(csvBlob.getDataAsString("utf-16"), "\t",);
-
-  var contactHdr = [
-    "Voter File VANID",
-    "Contact Name",
-    "Date Canvassed",
-    "Result",
-    "Contact Type",
-    "Canvassed By",
-    "Created By",
-    "Date Created",
-    "Input Type Name",
-    "MiniVAN Campaign",
-  ];
-
-  var surveyHdr = [
-    "Voter File VANID",
-    "Contact Name",
-    "Date Canvassed",
-    "Survey Response",
-    "Survey Question Name",
-    "Survey Question Type",
-    "Canvassed By",
-    "Contact Type",
-  ];
 
   // Get the header values
   var hdr = csvData[0];
 
 
-  if (
-    ((outputSheet == "Add Survey Data") & !compareArrays(hdr, surveyHdr)) |
-    ((outputSheet == "Add Contact Data") & !compareArrays(hdr, contactHdr))
-  ) {
+  if (!compareArrays(hdr, header)) {
     throw new Error(
       "Header does not align with expected output, please check file"
     );
