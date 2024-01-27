@@ -82,7 +82,7 @@ function compareArrays(rangeArray, stringArray) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 
 function cleanupSheet(sheet) {
-  var myArray = initializeArray(fullHeader.length);
+  var myArray = initializeArray(header.length);
 
   var lastRow = sheet.getLastRow();
 
@@ -326,8 +326,8 @@ function processCSVData(sheet, filename_, csvBlob) {
     .setValues(csvData);
 
   sheet
-    .getRange(2, sheet.getLastColumn() - 2, csvData.length, 1)
-    .setFormula("=COUNTIF(A$1:A2,A2)");
+    .getRange(startRow, sheet.getLastColumn() - 2, csvData.length, 1)
+    .setFormula("=COUNTIF(A$1:"+"A"+startRow.toString()+","+"A"+startRow.toString()+")");
   sheet
     .getRange(startRow, sheet.getLastColumn() - 1, csvData.length, 1)
     .setValues(filenameArray);
