@@ -36,12 +36,6 @@ To run the script, follow these steps:
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc.
-
 ## Using the Prebuilt Spreadsheet
 
 If you want to get started quickly, you can use our prebuilt Google Spreadsheet. Here's how:
