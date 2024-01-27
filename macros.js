@@ -1,10 +1,6 @@
 /* eslint-disable no-undef */
 /** @OnlyCurrentDoc */
 
-
-
-
-
 /** @type {GoogleAppsScript.Spreadsheet.Sheet} */
 var activeSheet;
 
@@ -20,16 +16,57 @@ var folder;
 /** @type {GoogleAppsScript.Spreadsheet.Sheet} */
 var dataSheet;
 
-/** @type {String[][]} */
+/** @type {String[]} */
 var additionalColumns;
 
-/** @type {String[][]} */
+/** @type {String[]} */
 var header;
 
-/** @type {String[][]} */
+/** @type {String[]} */
 var fullHeader;
 
+/** @type {boolean} */
+var debug = false;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function processSheet() {
+  additionalColumns = ["Instance of VANID", "Filename", "Date/Time Added"];
+
+  if (!debug) {
+    activeSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  } else {
+    activeSheet =
+      SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Add Survey Data");
+  }
+  setup();
+  spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  parentFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
+  header = Utilities.parseCsv(
+    preprocessCsvData(activeSheet.getRange(1, 11).getValue()).replace(
+      /\n/g,
+      " "
+    )
+  )[0]; //.replace(/\n/g, "").trim();
+  Logger.log(header);
+  fullHeader = header.concat(additionalColumns);
+  dataSheet = setupSheet(activeSheet.getRange(1, 8).getValue());
+  folder = setupFiles(activeSheet.getRange(1, 5).getValue());
+  processCSVFilesInZip(dataSheet, folder);
+  var numberOfDuplicates = cleanupSheet(dataSheet);
+  sortSummaryandUpdateCounts(numberOfDuplicates);
+  showDoneMessage();
+
+  function preprocessCsvData(csvData) {
+    // Remove leading and trailing whitespace from each line
+    var lines = csvData.split(",");
+    lines = lines.map((line) => line.trim());
+
+    // Join the lines back together
+    var preprocessedCsvData = lines.join(",");
+
+    return preprocessedCsvData;
+  }
+}
 
 function compareArrays(rangeArray, stringArray) {
   if (rangeArray.length !== stringArray.length) {
@@ -43,31 +80,9 @@ function compareArrays(rangeArray, stringArray) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function processSheet() {
-  additionalColumns = [
-    "Instance of VANID",
-    "Filename",
-    "Date/Time Added"
-  ];
-  activeSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  setup();
-  setupSheet(activeSheet.getRange(1, 8).getValue());
-  setupFiles();
-  processCSVFilesInZip(dataSheet, folder);
-  var numberOfDuplicates = cleanupSheet(dataSheet);
-  sortSummaryandUpdateCounts(numberOfDuplicates);
-  showDoneMessage();
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 
 function cleanupSheet(sheet) {
-  var Array;
-  if (sheet.getName() == "surveyDataTemp") {
-    Array = [1, 2, 3, 4, 5, 6, 7, 8];
-  } else {
-    Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  }
+  var myArray = initializeArray(fullHeader.length);
 
   var lastRow = sheet.getLastRow();
 
@@ -83,11 +98,19 @@ function cleanupSheet(sheet) {
   // Sort the data
   dataRange.sort(3);
   // Remove duplicates
-  dataRange.removeDuplicates(Array);
+  dataRange.removeDuplicates(myArray);
 
-  return numberOfDuplicates = lastRow - sheet.getLastRow();
+  return (numberOfDuplicates = lastRow - sheet.getLastRow());
 
-
+  /**
+   *
+   *
+   * @param {number} length
+   * @return {Array}
+   */
+  function initializeArray(length) {
+    return Array.from({ length: length }, (_, i) => i + 1);
+  }
 }
 
 /**
@@ -103,8 +126,6 @@ function sortSummaryandUpdateCounts(numberOfDuplicates) {
   activeSheet.getRange(5, 11).setValue(numberOfDuplicates);
   total = activeSheet.getRange(4, 11).getValue();
   activeSheet.getRange(6, 11).setValue(numberOfDuplicates / total);
-
-
 }
 
 function showPleaseWait() {
@@ -152,11 +173,6 @@ function setup() {
   clearTableIfFirstValue();
   clearProgress();
   showPleaseWait();
-  spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  parentFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
-
-  header = Utilities.parseCsv(activeSheet.getRange(1, 11).getValue(), ",");
-  fullHeader = header.concat(additionalColumns);
 }
 
 function setupSheet(sheetName) {
@@ -166,9 +182,9 @@ function setupSheet(sheetName) {
   } else {
     dataSheet = spreadsheet.insertSheet(sheetName);
   }
-  dataSheet
-    .getRange(1, 1, 1, fullHeader[0].length)
-    .setValues(fullHeader);
+  Logger.log(fullHeader);
+  dataSheet.getRange(1, 1, 1, fullHeader.length).setValues([fullHeader]);
+  return dataSheet;
 }
 
 /**
@@ -176,20 +192,22 @@ function setupSheet(sheetName) {
  */
 function setupFiles(folderName) {
   // Get the active spreadsheet and its parent folder
-  folder = parentFolder.getFoldersByName(folderName);
-  if (!folder.hasNext()) {
+  var folderIterator = parentFolder.getFoldersByName(folderName);
+  var folder;
+  if (!folderIterator.hasNext()) {
     folder = parentFolder.createFolder(folderName);
     // eslint-disable-next-line no-undef
     Logger.log(folderName + " folder created.");
   } else {
+    folder = folderIterator.next();
     Logger.log(folderName + " folder already exists.");
   }
-
+  return folder;
 }
 
 /**
  * Processes CSV files within a ZIP folder.
- * 
+ *
  * @param {Sheet} sheet - The sheet to write the output to.
  * @param {GoogleAppsScript.Drive.Folder} folder - The folder containing the ZIP files.
  * @param {string} output - The output destination.
@@ -224,15 +242,12 @@ function processCSVFilesInZip(sheet, folder) {
           try {
             processCSVData(sheet, fileName, innerFile);
           } catch (e) {
-            addRowsToTable(
-              fileName,
-              null,
-              null,
-              null,
-              e);
+            addRowsToTable(fileName, null, null, null, e);
           }
         } else {
-          throw new Error("Invalid file type: " + innerFileName + " in " + fileName);
+          throw new Error(
+            "Invalid file type: " + innerFileName + " in " + fileName
+          );
         }
       } catch (e) {
         addRowsToTable(fileName, null, null, null, e);
@@ -250,12 +265,10 @@ function processCSVFilesInZip(sheet, folder) {
  * @param {boolean} reset
  */
 function processCSVData(sheet, filename_, csvBlob) {
-
-  var csvData = Utilities.parseCsv(csvBlob.getDataAsString("utf-16"), "\t",);
+  var csvData = Utilities.parseCsv(csvBlob.getDataAsString("utf-16"), "\t");
 
   // Get the header values
   var hdr = csvData[0];
-
 
   if (!compareArrays(hdr, header)) {
     throw new Error(
@@ -264,12 +277,12 @@ function processCSVData(sheet, filename_, csvBlob) {
   }
 
   // Get the data values excluding headers
-  csvData = csvData.slice(1).map(row => {
+  csvData = csvData.slice(1).map((row) => {
     // Iterate over each cell in the row
     return row.map((cell, i) => {
       // If the header of this column contains the word "Date", reformat the cell
       if (hdr[i].includes("Date")) {
-        var parts = cell.split('-');
+        var parts = cell.split("-");
         if (parts.length === 3) {
           var date = new Date(parts[0], parts[1] - 1, parts[2]);
           return Utilities.formatDate(date, "America/New_York", "MM/dd/yyyy");
@@ -282,26 +295,23 @@ function processCSVData(sheet, filename_, csvBlob) {
       }
     });
   });
-  var dateValues = csvData.map(row => new Date(row[2]))
+  var dateValues = csvData.map((row) => new Date(row[2]));
 
-  var maxRange = Utilities.formatDate(new Date(Math.max.apply(null, dateValues)), "America/New_York", "MM/dd/yyyy");
-  var minRange = Utilities.formatDate(new Date(Math.min.apply(null, dateValues)), "America/New_York", "MM/dd/yyyy");
-
-  addRowsToTable(
-    filename_,
-    minRange,
-    maxRange,
-    csvData.length,
-    "OK"
+  var maxRange = Utilities.formatDate(
+    new Date(Math.max.apply(null, dateValues)),
+    "America/New_York",
+    "MM/dd/yyyy"
+  );
+  var minRange = Utilities.formatDate(
+    new Date(Math.min.apply(null, dateValues)),
+    "America/New_York",
+    "MM/dd/yyyy"
   );
 
+  addRowsToTable(filename_, minRange, maxRange, csvData.length, "OK");
+
   Logger.log(
-    "File " +
-    filename_ +
-    ", starts on " +
-    minRange +
-    " and ends on " +
-    maxRange
+    "File " + filename_ + ", starts on " + minRange + " and ends on " + maxRange
   );
   // Append the imported data to the existing or new sheet
 
@@ -324,8 +334,6 @@ function processCSVData(sheet, filename_, csvBlob) {
   sheet
     .getRange(startRow, sheet.getLastColumn(), csvData.length, 1)
     .setValues(dateTimeCol);
-
-
 }
 /**
  *
@@ -333,7 +341,7 @@ function processCSVData(sheet, filename_, csvBlob) {
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
  * @param {number} startColumn
  * @param {number} endColumn
- * @return {number} 
+ * @return {number}
  */
 function getLastRowInRange(sheet, startColumn, endColumn) {
   var data = sheet
@@ -362,14 +370,7 @@ function getLastRowInRange(sheet, startColumn, endColumn) {
  * @param {String} statusColumn
  * @param {boolean} isFirstValue
  */
-function addRowsToTable(
-  filename,
-  min,
-  max,
-  numRowsProcessed,
-  statusColumn
-) {
-
+function addRowsToTable(filename, min, max, numRowsProcessed, statusColumn) {
   // Get the last row in the specified range
   var lastRow = getLastRowInRange(activeSheet, "C", "H");
 
