@@ -49,3 +49,18 @@ If you want to get started quickly, you can use our prebuilt Google Spreadsheet.
 Please note that you need to have a Google account to use this feature.
 
 If you need access to the template, please contact Nick or Dave Mahler.
+
+## Script Functionality
+
+The main function of the script is `processSheet`. This function processes a Google Spreadsheet sheet and performs several operations:
+
+1. Retrieves and preprocesses header data from the 11th column of the first row in the active sheet.
+2. Concatenates additional column headers to the retrieved header data.
+3. Calls `setupSheet` function with the value from the 8th column of the first row in the active sheet. This function is expected to perform some setup tasks on the sheet.
+4. Calls `setupFiles` function with the value from the 5th column of the first row in the active sheet. This function is expected to perform some setup tasks on the files.
+5. Calls `processCSVFilesInZip` function to process CSV files within ZIP files in a specified folder.
+6. Calls `cleanupSheet` function to remove duplicates from the sheet.
+7. Calls `sortSummaryandUpdateCounts` function to sort a summary and update counts based on the number of duplicates.
+8. Calls `showDoneMessage` function to show a message indicating that the processing is done.
+
+Please note that the actual functionality of `setupSheet`, `setupFiles`, `processCSVFilesInZip`, `cleanupSheet`, `sortSummaryandUpdateCounts`, and `showDoneMessage` functions depends on their implementation in the script.
