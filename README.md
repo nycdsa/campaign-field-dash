@@ -30,7 +30,7 @@ To run the script, follow these steps:
 
 ## Authors
 
-* **Your Name** - *Initial work* - [YourGitHubUsername](https://github.com/YourGitHubUsername)
+* **Sebastian Caceres** - *Campaign in a Box, VAN Report Importer* - [SebastianCaceres](https://github.com/SebastianCaceres/)
 
 ## License
 
@@ -41,3 +41,17 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 * Hat tip to anyone whose code was used
 * Inspiration
 * etc.
+
+## Using the Prebuilt Spreadsheet
+
+If you want to get started quickly, you can use our prebuilt Google Spreadsheet. Here's how:
+
+1. Go to [Prebuilt Spreadsheet](https://docs.google.com/spreadsheets/d/1ZO4C2JnS4Z-QF5EEXGjZcA6inW1ZOpqtoqtByZeuCc4/edit?usp=drive_link).
+2. Click on `File` > `Make a copy...` to create a copy of the spreadsheet in your Google Drive.
+3. Open the Script Editor from `Extensions` > `Apps Script`.
+4. Paste the script code into the Script Editor and save the project.
+5. Now, you can run the script from the select function dropdown in the Script Editor.
+
+Please note that you need to have a Google account to use this feature.
+
+If you need access to the template, please contact Nick or Dave Mahler.
