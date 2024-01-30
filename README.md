@@ -65,17 +65,18 @@ The script reads these values from either the third or fourth row of the Configu
 
 Please ensure that the Configuration sheet is properly set up with the correct values in these cells before running the script.
 
+## File Setup
+
+When you run the script, it checks if a specific folder exists in the same location as your Google Spreadsheet. If the folder doesn't exist, the script will create it for you. This folder is where you should place any ZIP files that you want the script to process. Once the ZIP files are in this folder, the script can read and process them accordingly.
+
 ## Script Functionality
 
-The main function of the script is `processSheet`. This function processes a Google Spreadsheet sheet and performs several operations:
+When you run this script on a Google Spreadsheet, it performs several operations:
 
-1. Retrieves and preprocesses header data from the 11th column of the first row in the active sheet.
-2. Concatenates additional column headers to the retrieved header data.
-3. Calls `setupSheet` function with the value from the 8th column of the first row in the active sheet. This function is expected to perform some setup tasks on the sheet.
-4. Calls `setupFiles` function with the value from the 5th column of the first row in the active sheet. This function is expected to perform some setup tasks on the files.
-5. Calls `processCSVFilesInZip` function to process CSV files within ZIP files in a specified folder.
-6. Calls `cleanupSheet` function to remove duplicates from the sheet.
-7. Calls `sortSummaryandUpdateCounts` function to sort a summary and update counts based on the number of duplicates.
-8. Calls `showDoneMessage` function to show a message indicating that the processing is done.
+1. It reads certain information from the first row of the active sheet.
+2. It prepares the active sheet and a specific folder for data processing.
+3. It processes CSV files within ZIP files located in the specified folder.
+4. It removes any duplicate data from the sheet.
+5. It sorts a summary and updates counts based on the number of duplicates.
+6. Finally, it shows a message indicating that the processing is done.
 
-Please note that the actual functionality of `setupSheet`, `setupFiles`, `processCSVFilesInZip`, `cleanupSheet`, `sortSummaryandUpdateCounts`, and `showDoneMessage` functions depends on their implementation in the script.
