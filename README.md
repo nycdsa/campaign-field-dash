@@ -12,10 +12,15 @@ You need to have a Google account to run this script in the Google Apps Script e
 
 ### Installing
 
-1. Open Google Apps Script in your browser.
-2. Click on `New Project`.
-3. Copy and paste the code from `macros.js` into the script editor.
-4. Save the project with your desired name.
+1. Open the Google Sheet where you want to install the macro. Please note that the structure of this sheet needs to match a specific template for the macro to work correctly. You can find a link to this template in the "Using prebuilt template" section of this document.
+2. Navigate to the menu bar at the top of the Google Sheets interface. Click on `Extensions`, then select `Apps Script`. This will open the Google Apps Script Editor in a new tab.
+3. In the Apps Script Editor, you might see some default code. If so, select all of it and press `Delete` to remove it.
+4. Open the `macros.js` file in a text editor. Select all the code and copy it.
+5. Go back to the Apps Script Editor. Click inside the code editor area, then press `Ctrl+V` or `Cmd+V` to paste the copied code.
+6. After pasting the code, navigate to the menu bar at the top of the Apps Script Editor. Click on `File`, then select `Save`.
+7. A dialog box will appear asking you to name the project. Enter your desired name, then click `OK`.
+
+After following these steps, the macro is now installed in your Google Sheet and ready to use. Remember to use the prebuilt template for the macro to function correctly.
 
 ## Running the script
 
@@ -38,14 +43,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Using the Prebuilt Spreadsheet
 
-If you want to get started quickly, you can use our prebuilt Google Spreadsheet. Here's how:
-
-1. Go to [Prebuilt Spreadsheet](https://docs.google.com/spreadsheets/d/1ZO4C2JnS4Z-QF5EEXGjZcA6inW1ZOpqtoqtByZeuCc4/edit?usp=drive_link).
-2. Click on `File` > `Make a copy...` to create a copy of the spreadsheet in your Google Drive.
-3. Open the Script Editor from `Extensions` > `Apps Script`.
-4. Paste the script code into the Script Editor and save the project.
-5. Configure the buttons in the Google Sheets interface. To do this, go back to your Google Sheet, right-click on the button (drawing), and select `Assign Script`. In the text box that appears, type `processSheet` and click `OK`.
-6. Now, you can run the script either from the select function dropdown in the Script Editor or by clicking the button with the assigned script in the Google Sheets interface.
+If you want to get started quickly, you can use our prebuilt Google Spreadsheet. You can find it at the following link: [Prebuilt Spreadsheet](https://docs.google.com/spreadsheets/d/1ZO4C2JnS4Z-QF5EEXGjZcA6inW1ZOpqtoqtByZeuCc4/edit?usp=drive_link).
 
 Please note that you need to have a Google account to use this feature.
 
