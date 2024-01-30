@@ -17,6 +17,9 @@
     }, {
       "menuName": "processSurvey",
       "functionName": "processSurvey"
+    }, {
+      "menuName": "setupSheet",
+      "functionName": "setupSheet1"
     }]
   }
 }

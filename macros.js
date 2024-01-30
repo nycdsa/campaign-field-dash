@@ -4,6 +4,9 @@
 /** @type {GoogleAppsScript.Spreadsheet.Sheet} */
 var activeSheet;
 
+/** @type {GoogleAppsScript.Spreadsheet.Sheet} */
+var configSheet;
+
 /** @type {GoogleAppsScript.Spreadsheet.Spreadsheet} */
 var spreadsheet;
 
@@ -30,6 +33,8 @@ var debug = false;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function processSheet() {
+  configSheet =
+    SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Configuration");
   additionalColumns = ["Instance of VANID", "Filename", "Date/Time Added"];
 
   if (!debug) {
@@ -41,18 +46,25 @@ function processSheet() {
   setup();
   spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   parentFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
-  header = Utilities.parseCsv(
-    preprocessCsvData(activeSheet.getRange(1, 11).getValue()).replace(
-      /\n/g,
-      " "
-    )
-  )[0]; //.replace(/\n/g, "").trim();
+  var folderName;
+  var dataSheetName;
+  var headerName;
+  if (activeSheet.getName() == "Add Survey Data") {
+    folderName = configSheet.getRange(3, 3).getValue();
+    dataSheetName = configSheet.getRange(3, 4).getValue();
+    headerName = configSheet.getRange(3, 5).getValue();
+  } else {
+    folderName = configSheet.getRange(4, 3).getValue();
+    dataSheetName = configSheet.getRange(4, 4).getValue();
+    headerName = configSheet.getRange(4, 5).getValue();
+  }
+  header = Utilities.parseCsv(preprocessCsvData(headerName))[0]; //.replace(/\n/g, "").trim();
   Logger.log(header);
   fullHeader = header.concat(additionalColumns);
-  dataSheet = setupSheet(activeSheet.getRange(1, 8).getValue());
-  folder = setupFiles(activeSheet.getRange(1, 5).getValue());
+  dataSheet = setupSheet(dataSheetName);
+  folder = setupFiles(folderName);
   processCSVFilesInZip(dataSheet, folder);
-  var numberOfDuplicates = cleanupSheet(dataSheet);
+  var numberOfDuplicates = cleanupSheet();
   sortSummaryandUpdateCounts(numberOfDuplicates);
   showDoneMessage();
 
@@ -62,7 +74,7 @@ function processSheet() {
     lines = lines.map((line) => line.trim());
 
     // Join the lines back together
-    var preprocessedCsvData = lines.join(",");
+    var preprocessedCsvData = lines.join(",").replace(/\n/g, " ");
 
     return preprocessedCsvData;
   }
@@ -80,11 +92,15 @@ function compareArrays(rangeArray, stringArray) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-
-function cleanupSheet(sheet) {
+/**
+ *
+ *
+ * @return {number}
+ */
+function cleanupSheet() {
   var myArray = initializeArray(header.length);
 
-  var lastRow = sheet.getLastRow();
+  var lastRow = dataSheet.getLastRow();
 
   // Check if there is at least one row of data
   if (lastRow <= 1) {
@@ -92,15 +108,22 @@ function cleanupSheet(sheet) {
     Logger.log("No data in the range. Skipping cleanup.");
     return;
   }
+  var dataRange = dataSheet.getRange(
+    2,
+    1,
+    lastRow - 1,
+    dataSheet.getLastColumn()
+  );
 
-  var dataRange = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn());
-
-  // Sort the data
-  dataRange.sort(3);
+  var dateCanvassedIndex = fullHeader.indexOf("Date Canvassed") + 1;
+  if (dateCanvassedIndex !== -1) {
+    // Sort the data
+    dataRange.sort(dateCanvassedIndex);
+  }
   // Remove duplicates
   dataRange.removeDuplicates(myArray);
 
-  return (numberOfDuplicates = lastRow - sheet.getLastRow());
+  return (numberOfDuplicates = lastRow - dataSheet.getLastRow());
 
   /**
    *
@@ -116,7 +139,6 @@ function cleanupSheet(sheet) {
 /**
  *
  *
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
  * @param {Number} numberOfDuplicates
  * @paramm {Number} total
  */
@@ -170,6 +192,8 @@ function clearProgress() {
 }
 
 function setup() {
+  activeSheet.getRange("K6").clearContent();
+  activeSheet.getRange("K5").clearContent();
   clearTableIfFirstValue();
   clearProgress();
   showPleaseWait();
@@ -180,7 +204,8 @@ function setupSheet(sheetName) {
   if (dataSheet != null) {
     dataSheet.getDataRange().clear();
   } else {
-    dataSheet = spreadsheet.insertSheet(sheetName);
+    dataSheet = spreadsheet.insertSheet(sheetName, activeSheet.getIndex() + 1);
+    spreadsheet.setActiveSheet(activeSheet);
   }
   Logger.log(fullHeader);
   dataSheet.getRange(1, 1, 1, fullHeader.length).setValues([fullHeader]);
@@ -295,7 +320,14 @@ function processCSVData(sheet, filename_, csvBlob) {
       }
     });
   });
-  var dateValues = csvData.map((row) => new Date(row[2]));
+  var dateColumnIndex = hdr.indexOf("Date Canvassed");
+  if (dateColumnIndex < 0) {
+    throw new Error("Column 'Date Canvassed' not found");
+  }
+
+  var dateValues = csvData.map((row) => {
+    return new Date(row[dateColumnIndex]);
+  });
 
   var maxRange = Utilities.formatDate(
     new Date(Math.max.apply(null, dateValues)),
@@ -325,9 +357,25 @@ function processCSVData(sheet, filename_, csvBlob) {
     .getRange(startRow, 1, csvData.length, csvData[0].length)
     .setValues(csvData);
 
+  var vanidColumn = hdr.indexOf("Voter File VANID");
+  var vanidColumnLetter = sheet
+    .getRange(1, vanidColumn + 1)
+    .getA1Notation()
+    .replace(/[0-9]/g, "");
+
   sheet
     .getRange(startRow, sheet.getLastColumn() - 2, csvData.length, 1)
-    .setFormula("=COUNTIF(A$1:"+"A"+startRow.toString()+","+"A"+startRow.toString()+")");
+    .setFormula(
+      "=COUNTIF(" +
+        vanidColumnLetter +
+        "$1:" +
+        vanidColumnLetter +
+        startRow.toString() +
+        "," +
+        vanidColumnLetter +
+        startRow.toString() +
+        ")"
+  );
   sheet
     .getRange(startRow, sheet.getLastColumn() - 1, csvData.length, 1)
     .setValues(filenameArray);

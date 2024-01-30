@@ -50,6 +50,20 @@ Please note that you need to have a Google account to use this feature.
 
 If you need access to the template, please contact Nick or Dave Mahler.
 
+## Configuration Sheet
+
+The Configuration sheet is a crucial part of the script. It is used to store and retrieve various configuration parameters that the script uses to process the data.
+
+The Configuration sheet is expected to have the following structure:
+
+- The third column contains the names of the folders where the script will look for files to process.
+- The fourth column contains the names of the data sheets where the script will write the processed data.
+- The fifth column contains the header names that the script will use when processing the data.
+
+The script reads these values from either the third or fourth row of the Configuration sheet, depending on the name of the active sheet. If the active sheet's name is "Add Survey Data", the script reads the values from the third row. Otherwise, it reads the values from the fourth row.
+
+Please ensure that the Configuration sheet is properly set up with the correct values in these cells before running the script.
+
 ## Script Functionality
 
 The main function of the script is `processSheet`. This function processes a Google Spreadsheet sheet and performs several operations:
