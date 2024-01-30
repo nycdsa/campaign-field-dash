@@ -44,7 +44,8 @@ If you want to get started quickly, you can use our prebuilt Google Spreadsheet.
 2. Click on `File` > `Make a copy...` to create a copy of the spreadsheet in your Google Drive.
 3. Open the Script Editor from `Extensions` > `Apps Script`.
 4. Paste the script code into the Script Editor and save the project.
-5. Now, you can run the script from the select function dropdown in the Script Editor.
+5. Configure the buttons in the Google Sheets interface. To do this, go back to your Google Sheet, right-click on the button (drawing), and select `Assign Script`. In the text box that appears, type `processSheet` and click `OK`.
+6. Now, you can run the script either from the select function dropdown in the Script Editor or by clicking the button with the assigned script in the Google Sheets interface.
 
 Please note that you need to have a Google account to use this feature.
 
