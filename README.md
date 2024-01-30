@@ -87,3 +87,31 @@ When you run this script on a Google Spreadsheet, it performs several operations
 5. It sorts a summary and updates counts based on the number of duplicates.
 6. Finally, it shows a message indicating that the processing is done.
 
+## Security and Permissions
+
+The first time you run the script, Google will ask you to trust the script and give it access to your Google Drive. This is necessary for the script to read and write files. Check the "Granting Permissions" section for detailed steps on how to do this.
+
+Please consider the following security considerations:
+
+1. **Use a dedicated Google account**: To minimize the risk of exposing personal data, consider using a dedicated Google account for running this script instead of your personal account.
+
+2. **Limit sharing**: Only share the Google Spreadsheet with people who need access to it. Anyone with access can potentially run the script.
+
+3. **Review the script**: Before running the script, review it to ensure you understand what it does. Never run scripts from sources you do not trust.
+
+Remember, by running the script, you are responsible for any changes it makes to your Google Drive.
+
+### Granting Permissions
+
+The first time you run the script, Google will ask you to trust the script and give it access to your Google Drive. This is necessary for the script to read and write files. Here are the steps you'll need to follow:
+
+1. After clicking on the button to run the script, a dialog box will appear. This is Google's Authorization screen.
+2. Click on the `Continue` button in the dialog box.
+3. You'll be redirected to a new page. Here, you'll need to select your Google account.
+4. After selecting your account, you'll see a screen that lists the permissions the script is requesting. Review these permissions to ensure you're comfortable granting them.
+5. If you agree to the permissions, click on the `Allow` button.
+6. You'll be redirected back to your Google Sheet, and the script will run.
+
+Remember, by running the script, you are responsible for any changes it makes to your Google Drive.
+
+
