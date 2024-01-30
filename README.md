@@ -12,7 +12,11 @@ You need to have a Google account to run this script in the Google Apps Script e
 
 ### Installing
 
-1. Open the Google Sheet where you want to install the macro. Please note that the structure of this sheet needs to match a specific template for the macro to work correctly. You can find a link to this template in the "Using prebuilt template" section of this document.
+The easiest way to get started is to copy our prebuilt template. This template already contains the necessary scripts, so it's ready to use right away. You can find a link to this template in the "Using prebuilt template" section of this document.
+
+If you want to install the macro in a different Google Sheet, follow these steps:
+
+1. Open the Google Sheet where you want to install the macro. Please note that the structure of this sheet needs to match a specific template for the macro to work correctly.
 2. Navigate to the menu bar at the top of the Google Sheets interface. Click on `Extensions`, then select `Apps Script`. This will open the Google Apps Script Editor in a new tab.
 3. In the Apps Script Editor, you might see some default code. If so, select all of it and press `Delete` to remove it.
 4. Open the `macros.js` file in a text editor. Select all the code and copy it.
@@ -25,6 +29,11 @@ After following these steps, the macro is now installed in your Google Sheet and
 ## Running the script
 
 To run the script, follow these steps:
+
+1. Go to the "Add Survey Data" or "Add Contact Data" sheet in your Google Spreadsheet.
+2. Click on the button associated with the function you want to run. This is the recommended way to run the script.
+
+Alternatively, you can also run the script from the Apps Script Editor, but you must be in the "Add Contact Data" or "Add Survey Data" active sheet for it to work:
 
 1. Select the function you want to run from the select function dropdown.
 2. Click on the play icon to run the function.
