@@ -364,7 +364,7 @@ function processCSVData(sheet, filename_, csvBlob) {
     .replace(/[0-9]/g, "");
 
   sheet
-    .getRange(startRow, sheet.getLastColumn() - 2, csvData.length, 1)
+    .getRange(startRow, fullHeader.indexOf('Instance of VANID') + 1, csvData.length, 1)
     .setFormula(
       "=COUNTIF(" +
         vanidColumnLetter +
@@ -377,10 +377,10 @@ function processCSVData(sheet, filename_, csvBlob) {
         ")"
   );
   sheet
-    .getRange(startRow, sheet.getLastColumn() - 1, csvData.length, 1)
+    .getRange(startRow, fullHeader.indexOf('Filename') + 1, csvData.length, 1)
     .setValues(filenameArray);
   sheet
-    .getRange(startRow, sheet.getLastColumn(), csvData.length, 1)
+    .getRange(startRow, fullHeader.indexOf('Data/Time Added') +1 , csvData.length, 1)
     .setValues(dateTimeCol);
 }
 /**
