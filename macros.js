@@ -204,7 +204,7 @@ function setup() {
 /**
  *
  *
- * @param {*} parentFolder
+ * @param {GoogleAppsScript.Drive.Folder} parentFolder
  * @param {*} outputFileName
  * @param {*} sheetName
  * @return {*} 
@@ -214,23 +214,32 @@ function setupSheet(parentFolder,outputFileName, sheetName) {
   var files = parentFolder.getFilesByName(outputFileName);
   if (files.hasNext()) {
     // Workbook already exists, assign it to a variable
+    Logger.log("Workbook already exists");
     workbook = SpreadsheetApp.open(files.next());
   } else {
-    // Workbook does not exist, create it and assign it to a variable
     workbook = SpreadsheetApp.create(outputFileName);
+    tmp = DriveApp.getFileById(workbook.getId());
+    tmp.moveTo(parentFolder);
   }
   var dataSheet = workbook.getSheetByName(sheetName);
   
   if (dataSheet != null) {
     // Sheet already exists, assign it to a variable
+    Logger.log("Sheet already exists");
     dataSheet.clearContents();
   } else {
     // Sheet does not exist, create it and assign it to a variable
+    Logger.log("Sheet does not exist");
     dataSheet = workbook.insertSheet(sheetName);
   }
   
   Logger.log(fullHeader);
+  Logger.log("Parent Folder: " + parentFolder);
+  Logger.log("Output File Name: " + outputFileName);
+  Logger.log("Sheet Name: " + sheetName);
   dataSheet.getRange(1, 1, 1, fullHeader.length).setValues([fullHeader]);
+  
+  Logger.log("Setup sheet completed");
   
   return dataSheet;
 }
@@ -404,7 +413,7 @@ function processCSVData(sheet, filename_, csvBlob) {
     .getRange(startRow, fullHeader.indexOf('Filename') + 1, csvData.length, 1)
     .setValues(filenameArray);
   sheet
-    .getRange(startRow, fullHeader.indexOf('Data/Time Added') +1 , csvData.length, 1)
+    .getRange(startRow, fullHeader.indexOf('Date/Time Added') +1 , csvData.length, 1)
     .setValues(dateTimeCol);
 }
 /**
