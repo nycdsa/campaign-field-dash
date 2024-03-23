@@ -1,25 +1,34 @@
 {
   "timeZone": "America/New_York",
-  "dependencies": {
-  },
+  "dependencies": {},
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/drive.metadata",
+    "https://www.googleapis.com/auth/drive.metadata.readonly"
+  ],
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "sheets": {
-    "macros": [{
-      "menuName": "Import File",
-      "functionName": "ImportFile"
-    }, {
-      "menuName": "setupFiles",
-      "functionName": "setupFiles"
-    }, {
-      "menuName": "processContact",
-      "functionName": "processContact"
-    }, {
-      "menuName": "processSurvey",
-      "functionName": "processSurvey"
-    }, {
-      "menuName": "setupSheet",
-      "functionName": "setupSheet1"
-    }]
+    "macros": [
+      {
+        "menuName": "Import File",
+        "functionName": "ImportFile"
+      },
+      {
+        "menuName": "setupFiles",
+        "functionName": "setupFiles"
+      },
+      {
+        "menuName": "processContact",
+        "functionName": "processContact"
+      },
+      {
+        "menuName": "processSurvey",
+        "functionName": "processSurvey"
+      },
+      {
+        "menuName": "setupSheet",
+        "functionName": "setupSheet1"
+      }
+    ]
   }
 }

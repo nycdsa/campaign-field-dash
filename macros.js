@@ -46,23 +46,26 @@ function processSheet() {
   setup();
   spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   parentFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
+  var outputFileName;
   var folderName;
   var dataSheetName;
   var headerName;
   if (activeSheet.getName() == "Add Survey Data") {
-    folderName = configSheet.getRange(3, 3).getValue();
-    dataSheetName = configSheet.getRange(3, 4).getValue();
-    headerName = configSheet.getRange(3, 5).getValue();
+    folderName = configSheet.getRange("B3").getValue();
+    dataSheetName = configSheet.getRange("C3").getValue();
+    headerName = configSheet.getRange("D3").getValue();
+    outputFileName = configSheet.getRange("E3").getValue();
   } else {
-    folderName = configSheet.getRange(4, 3).getValue();
-    dataSheetName = configSheet.getRange(4, 4).getValue();
-    headerName = configSheet.getRange(4, 5).getValue();
+    folderName = configSheet.getRange("B4").getValue();
+    dataSheetName = configSheet.getRange("C4").getValue();
+    headerName = configSheet.getRange("D4").getValue();
+    outputFileName = configSheet.getRange("E4").getValue();
   }
   header = Utilities.parseCsv(preprocessCsvData(headerName))[0]; //.replace(/\n/g, "").trim();
   Logger.log(header);
   fullHeader = header.concat(additionalColumns);
-  dataSheet = setupSheet(dataSheetName);
   folder = setupFiles(folderName);
+  dataSheet = setupSheet(folder,outputFileName,dataSheetName);
   processCSVFilesInZip(dataSheet, folder);
   var numberOfDuplicates = cleanupSheet();
   sortSummaryandUpdateCounts(numberOfDuplicates);
@@ -198,17 +201,37 @@ function setup() {
   clearProgress();
   showPleaseWait();
 }
-
-function setupSheet(sheetName) {
-  dataSheet = spreadsheet.getSheetByName(sheetName);
-  if (dataSheet != null) {
-    dataSheet.getDataRange().clear();
+/**
+ *
+ *
+ * @param {*} parentFolder
+ * @param {*} outputFileName
+ * @param {*} sheetName
+ * @return {*} 
+ */
+function setupSheet(parentFolder,outputFileName, sheetName) {
+  var workbook = null;
+  var files = parentFolder.getFilesByName(outputFileName);
+  if (files.hasNext()) {
+    // Workbook already exists, assign it to a variable
+    workbook = SpreadsheetApp.open(files.next());
   } else {
-    dataSheet = spreadsheet.insertSheet(sheetName, activeSheet.getIndex() + 1);
-    spreadsheet.setActiveSheet(activeSheet);
+    // Workbook does not exist, create it and assign it to a variable
+    workbook = SpreadsheetApp.create(outputFileName);
   }
+  var dataSheet = workbook.getSheetByName(sheetName);
+  
+  if (dataSheet != null) {
+    // Sheet already exists, assign it to a variable
+    dataSheet.clearContents();
+  } else {
+    // Sheet does not exist, create it and assign it to a variable
+    dataSheet = workbook.insertSheet(sheetName);
+  }
+  
   Logger.log(fullHeader);
   dataSheet.getRange(1, 1, 1, fullHeader.length).setValues([fullHeader]);
+  
   return dataSheet;
 }
 
@@ -251,6 +274,7 @@ function processCSVFilesInZip(sheet, folder) {
 
     if (fileName.endsWith(".zip")) {
       var zipBlob = file.getBlob();
+      zipBlob.setContentTypeFromExtension();
       var zip = Utilities.unzip(zipBlob);
 
       // Process the ZIP file contents here
